@@ -34,7 +34,7 @@ export default async ({
     client: client.contentful,
     skipContent,
     contentType,
-    contentfulEnvironment || 'master'
+    contentfulEnvironment
   });
 
   await removeAllValidators({ datoClient, contentfulData });
