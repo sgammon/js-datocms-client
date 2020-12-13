@@ -146,7 +146,7 @@ module.exports = argv => {
     return contentfulImport({
       contentfulToken,
       contentfulSpaceId,
-      contentfulEnvironment || 'master',
+      contentfulEnvironment,
       datoCmsCmaBaseUrl,
       datoCmsToken,
       datoCmsEnvironment,
