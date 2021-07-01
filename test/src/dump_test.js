@@ -7,7 +7,10 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import TOML from '@iarna/toml';
 import parser from 'parser-front-matter';
+import b from 'unist-builder';
+import { expect } from 'chai';
 
+import { buildModularBlock } from '../../src/index';
 import dump from '../../src/dump/dump';
 
 import SiteClient from '../../src/site/SiteClient';
@@ -102,6 +105,19 @@ describe('dump', () => {
         }),
       );
 
+      const secondaryItemType = await client.itemTypes.create({
+        name: 'Author',
+        apiKey: 'author',
+      });
+
+      await client.fields.create(secondaryItemType.id, {
+        apiKey: 'name',
+        fieldType: 'string',
+        label: 'Name',
+        localized: false,
+        validators: { required: {} },
+      });
+
       const itemType = await client.itemTypes.create({
         name: 'Article',
         singleton: false,
@@ -122,6 +138,12 @@ describe('dump', () => {
         label: 'Title',
         localized: true,
         validators: { required: {} },
+      });
+
+      await client.fields.create(itemType.id, {
+        apiKey: 'title2',
+        fieldType: 'string',
+        label: 'Title 2',
       });
 
       await client.fields.create(itemType.id, {
@@ -164,6 +186,33 @@ describe('dump', () => {
         label: 'File',
         localized: false,
         validators: { required: {} },
+      });
+
+      const contentItemType = await client.itemTypes.create({
+        name: 'Block',
+        apiKey: 'block',
+        modularBlock: true,
+      });
+
+      await client.fields.create(contentItemType.id, {
+        label: 'Text',
+        fieldType: 'text',
+        apiKey: 'text',
+      });
+
+      await client.fields.create(itemType.id, {
+        label: 'Content',
+        fieldType: 'structured_text',
+        apiKey: 'content',
+        validators: {
+          structuredTextBlocks: { itemTypes: [contentItemType.id] },
+          structuredTextLinks: { itemTypes: [secondaryItemType.id] },
+        },
+      });
+
+      const author = await client.items.create({
+        itemType: secondaryItemType.id,
+        name: 'Mark',
       });
 
       const uploadedFilePath = path.resolve(
@@ -212,10 +261,30 @@ describe('dump', () => {
           en: 'First post',
           it: 'Primo post',
         },
+        title2: 'This is second title',
         slug: 'first-post',
         image,
         video,
         file,
+        content: {
+          schema: 'dast',
+          document: b('root', [
+            b('heading', { level: 1 }, [b('span', 'This is the title!')]),
+            b('paragraph', [
+              b('span', 'And '),
+              b('span', { marks: ['strong'] }, 'this'),
+              b('span', ' is an '),
+              b('itemLink', { item: author.id }, [b('span', 'author')]),
+            ]),
+            b('paragraph', [b('inlineItem', { item: author.id })]),
+            b('block', {
+              item: buildModularBlock({
+                itemType: contentItemType.id,
+                text: 'Foo',
+              }),
+            }),
+          ]),
+        },
       });
 
       await client.items.publish(item.id);
@@ -246,10 +315,14 @@ describe('dump', () => {
         ),
       );
 
+      expect(articleFile.data.structuredText.excerpt).to.eq(
+        '<h1>This is the title!</h1><p>And <strong>this</strong> is an <a href="/authors/mark">author</a></p><p><a href="/authors/mark">Mark</a></p><figure>Foo</figure>',
+      );
       expect(articleFile.data.itemType).to.eq('article');
       expect(articleFile.data.updatedAt).to.not.be.null();
       expect(articleFile.data.createdAt).to.not.be.null();
       expect(articleFile.data.title).to.eq('First post');
+      expect(articleFile.data.title2).to.eq('This is second title');
       expect(articleFile.data.slug).to.eq('first-post');
       expect(articleFile.data.image.alt).to.eq('My post image alt');
       expect(articleFile.data.image.title).to.eq('Default title');

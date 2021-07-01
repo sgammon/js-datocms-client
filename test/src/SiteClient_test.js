@@ -2,6 +2,9 @@ import { expect } from 'chai';
 /* global generateNewAccountClient:true */
 
 import u from 'updeep';
+import b from 'unist-builder';
+import unistMap from 'unist-util-map';
+import { isBlock } from 'datocms-structured-text-utils';
 import { SiteClient, buildModularBlock, ApiException } from '../../src/index';
 
 describe('Site API', () => {
@@ -28,9 +31,8 @@ describe('Site API', () => {
         const fetchedSite = await client.site.find();
         expect(fetchedSite.name).to.equal('Blog');
 
-        const updatedSite = await client.site.update(
-          u({ name: 'New blog' }, site),
-        );
+        const updatedSite = await client.site.update({ name: 'New blog' });
+
         expect(updatedSite.name).to.equal('New blog');
       }),
     );
@@ -326,6 +328,53 @@ describe('Site API', () => {
     );
 
     it(
+      'bulk publish/unpublish/destroy works',
+      vcr(async () => {
+        const itemType = await client.itemTypes.create({
+          name: 'Article',
+          apiKey: 'article',
+          singleton: true,
+          modularBlock: false,
+          sortable: false,
+          tree: false,
+          draftModeActive: true,
+          orderingDirection: null,
+          orderingField: null,
+          allLocalesRequired: true,
+          titleField: null,
+        });
+
+        await client.fields.create(itemType.id, {
+          label: 'Title',
+          fieldType: 'string',
+          localized: false,
+          apiKey: 'title',
+          validators: {},
+        });
+
+        const item = await client.items.create({
+          title: 'My first blog post',
+          itemType: itemType.id,
+        });
+
+        await client.items.bulkPublish({ items: [item.id] });
+
+        const item1 = await client.items.find(item.id);
+        expect(item1.meta.status).to.equal('published');
+
+        await client.items.bulkUnpublish({ items: [item.id] });
+
+        const item2 = await client.items.find(item.id);
+        expect(item2.meta.status).to.equal('draft');
+
+        await client.items.bulkDestroy({ items: [item.id] });
+
+        const allItems = await client.items.all();
+        expect(allItems).to.have.length(0);
+      }),
+    );
+
+    it(
       'create, find, all, update, destroy',
       vcr(async () => {
         const itemType = await client.itemTypes.create({
@@ -355,10 +404,10 @@ describe('Site API', () => {
           fieldType: 'file',
           localized: false,
           apiKey: 'attachment',
-          validators: {
-            required: {},
-          },
+          validators: { required: {} },
         });
+
+        const date = '2018-11-24T10:00';
 
         const item = await client.items.create({
           title: 'My first blog post',
@@ -366,9 +415,27 @@ describe('Site API', () => {
           attachment: await client.uploadFile(
             'test/fixtures/newTextFileHttps.txt',
           ),
+          meta: {
+            createdAt: date,
+            firstPublishedAt: date,
+            // updatedAt and publishedAt cannot be edited
+            updatedAt: date,
+            publishedAt: date,
+          },
         });
+
         expect(item.title).to.equal('My first blog post');
         expect(item.itemType).to.not.be.undefined();
+        expect(item.meta.createdAt).to.equal('2018-11-24T10:00:00.000+00:00');
+        expect(item.meta.firstPublishedAt).to.equal(
+          '2018-11-24T10:00:00.000+00:00',
+        );
+        expect(item.meta.updatedAt).not.to.equal(
+          '2018-11-24T10:00:00.000+00:00',
+        );
+        expect(item.meta.publishedAt).not.to.equal(
+          '2018-11-24T10:00:00.000+00:00',
+        );
 
         const foundItem = await client.items.find(item.id);
         expect(foundItem.id).to.equal(item.id);
@@ -526,9 +593,122 @@ describe('Site API', () => {
         });
 
         expect(item.content.length).to.equal(2);
+
+        const itemWithNestedBlocks = await client.items.find(item.id, {
+          nested: true,
+        });
+
+        await client.items.update(item.id, {
+          content: itemWithNestedBlocks.content.map(block => ({
+            ...block,
+            attributes: {
+              ...block.attributes,
+              text: `Updated ${block.attributes.text}`,
+            },
+          })),
+        });
+
+        const updatedItemWithNestedBlocks = await client.items.find(item.id, {
+          nested: true,
+        });
+
+        expect(updatedItemWithNestedBlocks.content[0].attributes.text).to.equal(
+          'Updated Foo',
+        );
+        expect(updatedItemWithNestedBlocks.content[1].attributes.text).to.equal(
+          'Updated Bar',
+        );
       }),
     );
   });
+
+  it(
+    'structured text',
+    vcr(async () => {
+      const articleItemType = await client.itemTypes.create({
+        name: 'Article',
+        apiKey: 'article',
+      });
+
+      const contentItemType = await client.itemTypes.create({
+        name: 'Block',
+        apiKey: 'block',
+        modularBlock: true,
+      });
+
+      await client.fields.create(contentItemType.id, {
+        label: 'Text',
+        fieldType: 'text',
+        apiKey: 'text',
+      });
+
+      await client.fields.create(articleItemType.id, {
+        label: 'Content',
+        fieldType: 'structured_text',
+        apiKey: 'content',
+        validators: {
+          structuredTextBlocks: { itemTypes: [contentItemType.id] },
+          structuredTextLinks: { itemTypes: [] },
+        },
+      });
+
+      const item = await client.items.create({
+        itemType: articleItemType.id,
+        content: {
+          schema: 'dast',
+          document: b('root', [
+            b('heading', { level: 1 }, [b('span', 'This is the title!')]),
+            b('paragraph', [
+              b('span', 'And '),
+              b('span', { marks: ['strong'] }, 'this'),
+              b('span', ' is a paragraph!'),
+            ]),
+            b('block', {
+              item: buildModularBlock({
+                itemType: contentItemType.id,
+                text: 'Foo',
+              }),
+            }),
+          ]),
+        },
+      });
+
+      expect(item.content.document.children.length).to.equal(3);
+
+      const itemWithNestedBlocks = await client.items.find(item.id, {
+        nested: true,
+      });
+
+      await client.items.update(item.id, {
+        content: {
+          ...itemWithNestedBlocks.content,
+          document: unistMap(itemWithNestedBlocks.content.document, node => {
+            return isBlock(node)
+              ? {
+                  ...node,
+                  item: {
+                    ...node.item,
+                    attributes: {
+                      ...node.item.attributes,
+                      text: `Updated ${node.item.attributes.text}`,
+                    },
+                  },
+                }
+              : node;
+          }),
+        },
+      });
+
+      const updatedItemWithNestedBlocks = await client.items.find(item.id, {
+        nested: true,
+      });
+
+      expect(
+        updatedItemWithNestedBlocks.content.document.children[2].item.attributes
+          .text,
+      ).to.equal('Updated Foo');
+    }),
+  );
 
   describe('plugins', () => {
     it(

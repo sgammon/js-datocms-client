@@ -679,7 +679,7 @@
             {
               "rel": "self",
               "method": "GET",
-              "title": "Retrieve a site",
+              "title": "Retrieve a project",
               "description": "",
               "href": "/sites/{(%2Fschemata%2Ffield%23%2Fdefinitions%2Fsite%2Fdefinitions%2Fidentity)}",
               "targetSchema": {
@@ -696,7 +696,7 @@
             {
               "method": "GET",
               "rel": "instances",
-              "title": "List all sites",
+              "title": "List all projects",
               "description": "",
               "href": "/sites",
               "targetSchema": {
@@ -719,7 +719,7 @@
             {
               "method": "POST",
               "rel": "create",
-              "title": "Create a new site",
+              "title": "Create a new project",
               "description": "",
               "href": "/sites",
               "schema": {
@@ -788,7 +788,7 @@
             {
               "method": "PUT",
               "rel": "update",
-              "title": "Update a new site",
+              "title": "Update project",
               "description": "",
               "href": "/sites/{(%2Fschemata%2Ffield%23%2Fdefinitions%2Fsite%2Fdefinitions%2Fidentity)}",
               "schema": {
@@ -819,6 +819,9 @@
                           },
                           "internal_subdomain": {
                             "$ref": "#/definitions/site/definitions/attributes/properties/internal_subdomain"
+                          },
+                          "is_public_template": {
+                            "$ref": "#/definitions/site/definitions/attributes/properties/is_public_template"
                           }
                         }
                       }
@@ -840,7 +843,7 @@
             {
               "method": "DELETE",
               "rel": "destroy",
-              "title": "Delete a site",
+              "title": "Delete a project",
               "description": "",
               "href": "/sites/{(%2Fschemata%2Ffield%23%2Fdefinitions%2Fsite%2Fdefinitions%2Fidentity)}",
               "targetSchema": {
@@ -874,7 +877,7 @@
             {
               "method": "POST",
               "rel": "duplicate",
-              "title": "Duplicate an existing site",
+              "title": "Duplicate an existing project",
               "description": "",
               "href": "/sites/{(%2Fschemata%2Ffield%23%2Fdefinitions%2Fsite%2Fdefinitions%2Fidentity)}/duplicate",
               "schema": {
@@ -1099,6 +1102,10 @@
                 },
                 "deactivated": {
                   "description": "Status of project according to billing situation",
+                  "type": "boolean"
+                },
+                "is_public_template": {
+                  "description": "Whether the project can be used as a public template",
                   "type": "boolean"
                 },
                 "status": {
@@ -4890,15 +4897,17 @@
       "Server",
       "Cowboy",
       "Date",
-      "Thu, 05 Nov 2020 08:49:05 GMT",
+      "Fri, 26 Mar 2021 13:49:08 GMT",
       "Connection",
       "close",
       "Last-Modified",
-      "Mon, 02 Nov 2020 17:26:52 GMT",
+      "Fri, 26 Mar 2021 09:30:57 GMT",
       "Content-Type",
       "application/json",
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains",
       "X-Queue-Time",
-      "2ms",
+      "1ms",
       "Access-Control-Allow-Credentials",
       "true",
       "Access-Control-Allow-Headers",
@@ -4912,7 +4921,7 @@
       "Access-Control-Allow-Origin",
       "*",
       "Content-Length",
-      "178147",
+      "178504",
       "Via",
       "1.1 vegur"
     ],
@@ -4926,7 +4935,7 @@
       "data": {
         "type": "account",
         "attributes": {
-          "email": "7uxipr@delete-this-at-midnight-utc.tk",
+          "email": "qthim2@delete-this-at-midnight-utc.tk",
           "company": "DatoCMS",
           "password": "STRONG_pass123!"
         }
@@ -4934,17 +4943,29 @@
     },
     "status": 201,
     "response": [
-      "1f8b080082bca35f0003",
-      "8c51616fda3010fd2ff9b04f046868c940aa36460a24c5a1a569299d26641c871c759c283e1742c57f9f536d425da769fee2d3ddbb77efeebd5a31456af55f2d88adbec5ab205d8f19cc20f0ef0ffe590841af69928ebfcdf7d3615098bf0a0fcb0b52ede0a9f2bbfed6df91ed00497485c47bb827dea61b7acf5de22df5cc5bb6af0f83dd6c3bd8f9b2dd4c46d3bb0597aabd1f2dce2be03dd61947f62d90041e069303759f5424e7dfae48f6d96a585815dc28525c29c8a549945c5034a14aa150b562ca58ae25d6e1bb251cb7dbeb9c187ec38ee6352c904ce8981bdcf77fc31b16452c61ad91bf4de3190561eaaede43517e8db9e0c86d4c41d914ed0c62099b146d8dac89cfa63b8152e14ad2cc904a2d44c312f48f04cbb382caca907a14f321b9336d4599bf40bd31c8cdca49e84a97600039165463da6fb5d084ad5ff8fe7f89f9a2382b395e5e5c0f5d7f49e6ce631885ae3f9e0e27c1623e21b78f8b1b271add7c02a5342f2f4f6240bd49a00ce1c5a84ea850fcf857276ac04ae9b562251475ed832b9d73c7fd70e5f72db53f6b10a25edddc2101c14f34f5c98c833f8e3f010000ffff",
-      "0300b07dd617b3020000"
+      "1f8b080055e65d600003",
+      "8c51ef6fd33010fd5ffc814ffdb136694a2b4d903663245b52602d3445287213a7b9d471427c6e49a7feef3813a81a43087ff1f9ddbbe777778f24a148c9f4914042a684355eb6bd8d61019ebb3ab98300bc494f8343372f7fdccfbd4adfa7c0f968facd11368d6bb9b97bf4f31bf41d1ffd7cb3f297be15387bcb77f66ab1dc357727fbb8c8eda32bae7a93651db18311567436fa605a83b5e7a637736b34d6e0bb79188c4b6f0d7b8799139b74083615d38e2493124aa1819a718a3a941954b2754ce3b85402dbf059138669be362e0abf69677d3a0444cc55c234efebbfe91d42116bd82a644fbfb18202d7f9ef9841317c9b30ce9075f5437629760b4804ec32ec2a8c7bb8d7d529d41223410b2d2a14e71dc2e91f405c1615158d1675289673ff419755757980b66310bb6898d248d5a0092556546136edf75187fd5ffce97f997923595c33bc7696e16cf570fb255cdbb63bdedc7db6df1b0b231c7d0a427be678eb5720a562f5f5c50cc8270b34463868d729e5929dffba89961049b595710d559b7bb195c195694d5e8cf9794dbba02d70def6ae07910267179d76667a85dfce3f010000ffff",
+      "0300a26ee20eb4020000"
     ],
     "rawHeaders": [
       "Server",
       "Cowboy",
       "Date",
-      "Thu, 05 Nov 2020 08:49:05 GMT",
+      "Fri, 26 Mar 2021 13:49:09 GMT",
       "Connection",
       "close",
+      "X-Frame-Options",
+      "SAMEORIGIN",
+      "X-Xss-Protection",
+      "1; mode=block",
+      "X-Content-Type-Options",
+      "nosniff",
+      "X-Download-Options",
+      "noopen",
+      "X-Permitted-Cross-Domain-Policies",
+      "none",
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin",
       "Content-Type",
       "application/json; charset=utf-8",
       "Vary",
@@ -4956,15 +4977,17 @@
       "X-Ratelimit-Remaining",
       "59",
       "Etag",
-      "W/\"eea0d76cab9d5c4c20fd49d60ee3e714\"",
+      "W/\"0f7d3da21bdd9690bc7b39e8bc4a4849\"",
       "Cache-Control",
       "max-age=0, private, must-revalidate",
       "X-Request-Id",
-      "b23a454a-3ac6-4b09-86a6-3b4e030a3ca9",
+      "6d3bca1c-282f-45e9-afa1-ed45e4ea2a86",
       "X-Runtime",
-      "0.505152",
+      "0.347830",
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains",
       "X-Queue-Time",
-      "6ms",
+      "2ms",
       "Access-Control-Allow-Credentials",
       "true",
       "Access-Control-Allow-Headers",
@@ -5664,7 +5687,7 @@
             {
               "rel": "self",
               "method": "GET",
-              "title": "Retrieve a site",
+              "title": "Retrieve a project",
               "description": "",
               "href": "/sites/{(%2Fschemata%2Ffield%23%2Fdefinitions%2Fsite%2Fdefinitions%2Fidentity)}",
               "targetSchema": {
@@ -5681,7 +5704,7 @@
             {
               "method": "GET",
               "rel": "instances",
-              "title": "List all sites",
+              "title": "List all projects",
               "description": "",
               "href": "/sites",
               "targetSchema": {
@@ -5704,7 +5727,7 @@
             {
               "method": "POST",
               "rel": "create",
-              "title": "Create a new site",
+              "title": "Create a new project",
               "description": "",
               "href": "/sites",
               "schema": {
@@ -5773,7 +5796,7 @@
             {
               "method": "PUT",
               "rel": "update",
-              "title": "Update a new site",
+              "title": "Update project",
               "description": "",
               "href": "/sites/{(%2Fschemata%2Ffield%23%2Fdefinitions%2Fsite%2Fdefinitions%2Fidentity)}",
               "schema": {
@@ -5804,6 +5827,9 @@
                           },
                           "internal_subdomain": {
                             "$ref": "#/definitions/site/definitions/attributes/properties/internal_subdomain"
+                          },
+                          "is_public_template": {
+                            "$ref": "#/definitions/site/definitions/attributes/properties/is_public_template"
                           }
                         }
                       }
@@ -5825,7 +5851,7 @@
             {
               "method": "DELETE",
               "rel": "destroy",
-              "title": "Delete a site",
+              "title": "Delete a project",
               "description": "",
               "href": "/sites/{(%2Fschemata%2Ffield%23%2Fdefinitions%2Fsite%2Fdefinitions%2Fidentity)}",
               "targetSchema": {
@@ -5859,7 +5885,7 @@
             {
               "method": "POST",
               "rel": "duplicate",
-              "title": "Duplicate an existing site",
+              "title": "Duplicate an existing project",
               "description": "",
               "href": "/sites/{(%2Fschemata%2Ffield%23%2Fdefinitions%2Fsite%2Fdefinitions%2Fidentity)}/duplicate",
               "schema": {
@@ -6084,6 +6110,10 @@
                 },
                 "deactivated": {
                   "description": "Status of project according to billing situation",
+                  "type": "boolean"
+                },
+                "is_public_template": {
+                  "description": "Whether the project can be used as a public template",
                   "type": "boolean"
                 },
                 "status": {
@@ -9875,15 +9905,17 @@
       "Server",
       "Cowboy",
       "Date",
-      "Thu, 05 Nov 2020 08:49:06 GMT",
+      "Fri, 26 Mar 2021 13:49:09 GMT",
       "Connection",
       "close",
       "Last-Modified",
-      "Mon, 02 Nov 2020 17:26:52 GMT",
+      "Fri, 26 Mar 2021 09:30:57 GMT",
       "Content-Type",
       "application/json",
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains",
       "X-Queue-Time",
-      "1ms",
+      "2ms",
       "Access-Control-Allow-Credentials",
       "true",
       "Access-Control-Allow-Headers",
@@ -9897,7 +9929,7 @@
       "Access-Control-Allow-Origin",
       "*",
       "Content-Length",
-      "178147",
+      "178504",
       "Via",
       "1.1 vegur"
     ],
@@ -9917,17 +9949,29 @@
     },
     "status": 201,
     "response": [
-      "1f8b080084bca35f0003",
-      "7c525d939a3014fd2f79162680c2e253ad3a2d76d176fc98ea0b13922051080eb91461c7ffdec4eeba0fce342f7772cf39776e4ece1b6204081abf21c1d0187981e3f96880a0bb707d5502b8be11805aa40d706588929406fb5a54478db1aa2442a2b16c8a628084045e4b5224aa493f10946aa6157ad80cae5ac9eb846ba4d048d05cc5a5fec278c1815b900b6511b04ac1a438e66035406d386b5541142466d184e6441e794240ab5dec62cb712c3cdae097f1301ce3c00e9dd1c16c4c29572a81eacccd06bc5be4e9372a5662116dfbc8598a4568eba61b9daaebeb74d1ebda2ffb79bf14ad20ebc88f4fd45d6d6215c95f469447ba7fe8223f3a456d7c9a40bc99433cdb6de3d9d15fcecebeae4ddccff18f7ed2ae4e933692d8fe2ed47a376df7c773c0c87acfe86cb19d917ee787affd3ef8ddc9eb76fad33958ddd93cf1e1dcb36d3661a590b67e7f454b65d3aad47c5a73029cfdcf09c738a169acadf53f3eccc0be47b3c0f3281f86190bd3e1c8737c9eba2f1813eabe4b2a59740fc5c8a769e6792e0903eeea4231761d82599861e66426049c50107fcc42689c9142f1015240a0d181b98febd0cdcc2d08884aaa5c5cee49ba8bb8c98aa2b5b818ccb4ff25d204ea36f8e05c0af28c414da4ca78fd04dc53f6d97d0fb71bf8a1f7196e9d91aa91806ee6fc050000ffff",
-      "0300303e371908030000"
+      "1f8b080057e65d600003",
+      "7c925f6fa24014c5bfcb3c0be19f083eadad6e83164da326bb7d21c330c820cc58e6520a8ddfbd33ae5d3731595ec89d73eee5cee1f789320c184d3f11cbd0147963d70dd108417fa2aa940ca8aa3040c3d216a8d4468e6bad3d54e2a0b44cd4987134e56d558d10e3401b8eab44b6e9b78252e534c6a1a3078b8ed326a14aa994f20605ab9d1f19ad28504315d2c060d42ce3ec5080d10231e1a8ba2a2c21d18b26a4c0fc40130caadbb11cdbb05cc3f177b63bf5c2a96d99a1e7bcea8d09a15226208e546f40fb65913e11b661cb683f44f69a2d43531d3a51293e9e1f97837a5beb5d3c6cb61dc3dbc88f87176b338f65c45f745311b18ebdf6911f955117970b88e731c4e5eb3edec5fe7a7ef4e3dda2ddcc17c36a98759b72d645dc321ba3fe193c37fd20927ed5bebba9908f90e51f8be4c1de9642ac8ebfdfb6e1fef8eb6986fe49ee3e36136735e3a6babf20b53489a8959f341403cdfe93841be824942deb1af51fff863176277916bab6e7fba965a501c1944cc210e7c138a0f8da2278d5dfe2a3b6ed902025bea3ac76869d1ce7936c32c6969f120d01c504d8bb5e084d735c493a421230b40a98cbb85edf5026a736ad184980d6a74a99afdeb3fea4aa99e0b260a70b64977954632449c34e5ad3c77f60d5ac9d47df1e35ea5e83067399d3e64eb800783bbd72ef7a5ee0deb857f88896033aebe70b0000ffff",
+      "0300ace1b21323030000"
     ],
     "rawHeaders": [
       "Server",
       "Cowboy",
       "Date",
-      "Thu, 05 Nov 2020 08:49:07 GMT",
+      "Fri, 26 Mar 2021 13:49:10 GMT",
       "Connection",
       "close",
+      "X-Frame-Options",
+      "SAMEORIGIN",
+      "X-Xss-Protection",
+      "1; mode=block",
+      "X-Content-Type-Options",
+      "nosniff",
+      "X-Download-Options",
+      "noopen",
+      "X-Permitted-Cross-Domain-Policies",
+      "none",
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin",
       "Content-Type",
       "application/json; charset=utf-8",
       "Vary",
@@ -9939,15 +9983,17 @@
       "X-Ratelimit-Remaining",
       "59",
       "Etag",
-      "W/\"e6d9260624829a23b1ee524ab0bfb22c\"",
+      "W/\"d1c25d2eeee1464f7935b365a888aabe\"",
       "Cache-Control",
       "max-age=0, private, must-revalidate",
       "X-Request-Id",
-      "b66707b3-d500-4dde-8756-402146152a67",
+      "a8d0cfc8-9c1a-4dbb-bed6-fb8942f92a50",
       "X-Runtime",
-      "0.749013",
+      "0.917230",
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains",
       "X-Queue-Time",
-      "7ms",
+      "2ms",
       "Access-Control-Allow-Credentials",
       "true",
       "Access-Control-Allow-Headers",

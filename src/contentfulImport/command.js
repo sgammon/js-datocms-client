@@ -1,3 +1,4 @@
+import ora from 'ora';
 import appClient from './appClient';
 import getContentfulData from './getContentfulData';
 import destroyExistingModels from './destroyExistingModels';
@@ -11,6 +12,7 @@ import addValidationsOnField from './addValidationsOnField';
 import linkRecords from './linkRecords';
 import createUploads from './createUploads';
 import publishRecords from './publishRecords';
+import { initializeCache, writeToFile, cached, destroyTempFile } from './cache';
 
 export default async ({
   contentfulToken,
@@ -22,80 +24,126 @@ export default async ({
   skipContent,
   contentType,
 }) => {
-  const client = await appClient(
-    contentfulToken,
-    contentfulSpaceId,
-    datoCmsToken,
-    datoCmsEnvironment,
-    datoCmsCmaBaseUrl,
-  );
-  const datoClient = client.dato;
-  const contentfulData = await getContentfulData({
-    client: client.contentful,
-    skipContent,
-    contentType,
-    contentfulEnvironment
-  });
+  try {
+    await initializeCache();
 
-  await removeAllValidators({ datoClient, contentfulData });
+    const client = await appClient(
+      contentfulToken,
+      contentfulSpaceId,
+      contentfulEnvironment,
+      datoCmsToken,
+      datoCmsEnvironment,
+      datoCmsCmaBaseUrl,
+    );
+    const datoClient = client.dato;
+    const contentfulData = cached('contentfulData')
+      ? cached('contentfulData')
+      : await getContentfulData({
+          client: client.contentful,
+          skipContent,
+          contentType,
+          contentfulEnvironment,
+        });
 
-  await destroyExistingModels({ datoClient, contentfulData });
+    writeToFile({ contentfulData });
 
-  await destroyExistingAssets({ datoClient });
+    if (!cached('fieldsMapping')) {
+      await removeAllValidators({ datoClient, contentfulData });
+    }
 
-  await setLocales({ datoClient, contentfulData });
+    if (!cached('itemTypeMapping')) {
+      await destroyExistingModels({ datoClient, contentfulData });
+    }
 
-  const itemTypes = await createModels({ datoClient, contentfulData });
+    if (!cached('uploadsMapping')) {
+      await destroyExistingAssets({ datoClient });
+    }
 
-  const fieldsMapping = await createFields({
-    itemTypes,
-    datoClient,
-    contentfulData,
-  });
+    await setLocales({ datoClient, contentfulData });
 
-  if (!skipContent) {
-    const { contentfulRecordMap, recordsToPublish } = await createRecords({
-      itemTypes,
+    // itemTypeMapping = { <contentTypeId>: <ItemType> }
+    const itemTypeMapping = cached('itemTypeMapping')
+      ? cached('itemTypeMapping')
+      : await createModels({ datoClient, contentfulData });
+
+    writeToFile({ itemTypeMapping });
+
+    // fieldsMapping = { <contentTypeId>: Array<{ datoField: Field, contentfulFieldId: string}> }
+    const fieldsMapping = cached('fieldsMapping')
+      ? cached('fieldsMapping')
+      : await createFields({
+          datoClient,
+          itemTypeMapping,
+          contentfulData,
+        });
+
+    writeToFile({ fieldsMapping });
+
+    if (!skipContent) {
+      // contentfulRecordMap = { <entryId>: <ItemId> }
+      // recordsToPublish = Array<ItemId>
+      const recordsMapping = cached('recordsMapping')
+        ? cached('recordsMapping')
+        : await createRecords({
+            itemTypeMapping,
+            fieldsMapping,
+            datoClient,
+            contentfulData,
+          });
+
+      writeToFile({ recordsMapping });
+
+      const cachedUploads = cached('uploadsMapping');
+
+      const uploadsMapping =
+        cachedUploads &&
+        Object.keys(cachedUploads).length === contentfulData.assets.length
+          ? cachedUploads
+          : await createUploads({
+              datoClient,
+              contentfulData,
+            });
+
+      writeToFile({ uploadsMapping });
+
+      // publish all records that should be published...
+      await publishRecords({
+        recordIds: recordsMapping.recordsToPublish,
+        datoClient,
+      });
+
+      // ... and link records afterwards, to make it simple. If we link before
+      // wou would need to build a tree structure and publish in the correct order...
+      const linkedRecords = await linkRecords({
+        datoClient,
+        fieldsMapping,
+        contentfulData,
+        contentfulRecordMap: recordsMapping.contentfulRecordMap,
+        uploadsMapping,
+      });
+
+      // ...but then we need to re-publish the records that
+      // had link fields set.
+      await publishRecords({
+        recordIds: linkedRecords,
+        datoClient,
+      });
+    }
+
+    await addValidationsOnField({
       fieldsMapping,
       datoClient,
       contentfulData,
     });
 
-    await createUploads({
-      fieldsMapping,
-      itemTypes,
-      datoClient,
-      contentfulData,
-      contentfulRecordMap,
-    });
+    const spinner = ora('Import completed! 🎉🎉🎉');
 
-    // publish all records that should be published...
-    await publishRecords({
-      recordIds: recordsToPublish,
-      datoClient,
-    });
+    destroyTempFile();
 
-    // ... and link records afterwards, to make it simple. If we link before
-    // wou would need to build a tree structure and publish in the correct order...
-    const linkedRecords = await linkRecords({
-      fieldsMapping,
-      datoClient,
-      contentfulData,
-      contentfulRecordMap,
-    });
+    spinner.succeed();
+  } catch (e) {
+    console.error('Importer error:', JSON.stringify(e, null, 2));
 
-    // ...but then we need to re-publish the records that
-    // had link fields set.
-    await publishRecords({
-      recordIds: linkedRecords,
-      datoClient,
-    });
+    throw e;
   }
-
-  await addValidationsOnField({
-    itemTypes,
-    fieldsMapping,
-    datoClient,
-    contentfulData,
-  });
 };

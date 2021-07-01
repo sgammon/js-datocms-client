@@ -1,5 +1,5 @@
 import jsonref from 'json-schema-ref-parser';
-import pluralize from 'pluralize';
+import { singular } from 'pluralize';
 import { decamelize, camelize } from 'humps';
 import fetch from './fetch';
 import deserializeJsonApi from './deserializeJsonApi';
@@ -11,6 +11,7 @@ import InvalidApiRequestException from '../InvalidApiRequestException';
 import wait from './wait';
 
 const identityRegexp = /\{\(.*?definitions%2F(.*?)%2Fdefinitions%2Fidentity\)}/g;
+const pluralResources = ['ssoSettings', 'whiteLabelSettings'];
 
 const getProps = obj =>
   Object.getOwnPropertyNames(obj)
@@ -24,8 +25,7 @@ const toMap = keys =>
   keys.reduce((acc, prop) => Object.assign(acc, { [prop]: true }), {});
 
 const findLinkFor = (schema, namespace, apiCall) => {
-  const singularized = decamelize(pluralize.singular(namespace));
-  const sub = schema.properties[singularized];
+  const sub = schema.properties[namespace];
 
   if (!sub) {
     throw new TypeError(`${namespace} is not a valid namespace`);
@@ -105,8 +105,12 @@ export default function generateClient(subdomain, cache, extraMethods = {}) {
               }
 
               return schemaPromise.then(async schema => {
-                const singularized = decamelize(pluralize.singular(namespace));
-                const link = findLinkFor(schema, singularized, apiCall);
+                const singularized = pluralResources.includes(namespace)
+                  ? namespace
+                  : singular(namespace);
+
+                const resourceName = decamelize(singularized);
+                const link = findLinkFor(schema, resourceName, apiCall);
 
                 let lastUrlId;
 
@@ -179,7 +183,7 @@ export default function generateClient(subdomain, cache, extraMethods = {}) {
 
                     return deserializeResponse
                       ? deserializeJsonApi(
-                          singularized,
+                          resourceName,
                           link.jobSchema,
                           jobResult.attributes.payload,
                         )
@@ -188,7 +192,7 @@ export default function generateClient(subdomain, cache, extraMethods = {}) {
 
                   return deserializeResponse
                     ? deserializeJsonApi(
-                        singularized,
+                        resourceName,
                         link.targetSchema,
                         response,
                       )
@@ -262,7 +266,13 @@ export default function generateClient(subdomain, cache, extraMethods = {}) {
                   : false;
 
                 if (allPages) {
-                  const request = fetchAllPages(rawClient, url, queryString);
+                  const perPage = allPages === true ? undefined : allPages;
+                  const request = fetchAllPages(
+                    rawClient,
+                    url,
+                    queryString,
+                    perPage,
+                  );
                   return request.then(response => deserialize(null, response));
                 }
 

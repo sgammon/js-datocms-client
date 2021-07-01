@@ -1,55 +1,73 @@
 import ora from 'ora';
 import Progress from './progress';
-import { toItemApiKey, toFieldApiKey } from './toApiKey';
+import { writeToFile, cached } from './cache';
 
-const { camelize } = require('humps');
-
-function uploadData(id) {
-  if (!id) {
-    return null;
-  }
-
-  return {
-    uploadId: id,
-    alt: null,
-    title: null,
-    customData: {},
-  };
-}
-
-export default async ({
-  fieldsMapping,
-  datoClient,
-  contentfulData,
-  contentfulRecordMap,
-}) => {
-  let spinner = ora('').start();
+export default async ({ datoClient, contentfulData }) => {
+  const spinner = ora('').start();
 
   try {
-    const { entries, assets } = contentfulData;
+    const { assets } = contentfulData;
 
-    let progress = new Progress(assets.length, 'Uploading assets');
+    const progress = new Progress(assets.length, 'Uploading assets');
     spinner.text = progress.tick();
 
-    const contentfulAssetsMap = {};
+    const uploadsMapping = cached('uploadsMapping') || {};
 
     for (const asset of assets) {
-      if (asset.fields && asset.fields.file) {
+      try {
+        spinner.text = progress.tick();
+
+        if (uploadsMapping[asset.sys.id.toString()]) {
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+
+        if (!(asset.fields && asset.fields.file)) {
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+
         const fileAttributes = asset.fields.file[contentfulData.defaultLocale];
+
+        if (!fileAttributes || !fileAttributes.url) {
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+
         const fileUrl = `https:${fileAttributes.url}`;
 
-        const path = await datoClient.createUploadPath(fileUrl);
+        const path = await datoClient.createUploadPath(fileUrl, {
+          onProgress: info => {
+            let text = `Asset #${asset.sys.id.toString()} `;
+
+            if (info.type === 'download') {
+              text += `(download from CF... ${info.payload.percent}%)`;
+            }
+            if (info.type === 'upload') {
+              text += `(upload to DatoCMS... ${info.payload.percent}%)`;
+            }
+
+            spinner.text = progress.changeText(text);
+          },
+        });
+
         const defaultFieldMetadata = contentfulData.locales.reduce(
           (acc, locale) => {
             return Object.assign(acc, {
               [locale]: {
                 title: asset.fields.title[locale],
-                alt: asset.fields.title[locale],
+                alt: asset.fields.description
+                  ? asset.fields.description[locale]
+                  : asset.fields.title[locale],
                 customData: {},
               },
             });
           },
           {},
+        );
+
+        spinner.text = progress.changeText(
+          `Asset #${asset.sys.id.toString()} (finalize upload...)`,
         );
 
         const upload = await datoClient.uploads.create({
@@ -59,101 +77,26 @@ export default async ({
           defaultFieldMetadata,
         });
 
-        contentfulAssetsMap[asset.sys.id.toString()] = upload.id;
+        uploadsMapping[asset.sys.id.toString()] = upload.id;
+        writeToFile({ uploadsMapping });
+      } catch (error) {
+        if (
+          error.errorWithCode &&
+          error.errorWithCode('PLAN_UPGRADE_REQUIRED')
+        ) {
+          throw error;
+        }
 
-        spinner.text = progress.tick();
-      } else {
-        spinner.text = progress.tick();
-      }
-    }
-    spinner.succeed();
-    spinner = ora('').start();
-    progress = new Progress(entries.length, 'Linking assets to records');
-    spinner.text = progress.tick();
-
-    for (const entry of entries) {
-      const datoItemId = contentfulRecordMap[entry.sys.id];
-      let recordAttributes = {};
-
-      for (const key of Object.keys(entry.fields)) {
-        const entryFieldValue = entry.fields[key];
-
-        const contentTypeApiKey = toItemApiKey(entry.sys.contentType.sys.id);
-        const apiKey = toFieldApiKey(key);
-
-        const field = fieldsMapping[contentTypeApiKey].find(
-          f => f.apiKey === apiKey,
+        console.error(
+          `Could not upload Contentful asset with ID ${asset.sys.id}`,
         );
 
-        let fileFieldAttributes = null;
-
-        if (field.fieldType === 'file' || field.fieldType === 'gallery') {
-          if (field.localized) {
-            const localizedValue = Object.keys(entryFieldValue).reduce(
-              (innerAcc, locale) => {
-                const innerValue = entryFieldValue[locale];
-                if (field.fieldType === 'file') {
-                  return Object.assign(innerAcc, {
-                    [locale]: uploadData(
-                      contentfulAssetsMap[innerValue.sys.id],
-                    ),
-                  });
-                }
-                return Object.assign(innerAcc, {
-                  [locale]: innerValue
-                    .map(link => uploadData(contentfulAssetsMap[link.sys.id]))
-                    .filter(v => !!v),
-                });
-              },
-              {},
-            );
-
-            const fallbackValues = contentfulData.locales.reduce(
-              (innerAcc, locale) => {
-                return Object.assign(innerAcc, {
-                  [locale]: localizedValue[contentfulData.defaultLocale],
-                });
-              },
-              {},
-            );
-
-            recordAttributes = Object.assign(recordAttributes, {
-              [camelize(apiKey)]: { ...fallbackValues, ...localizedValue },
-            });
-          } else {
-            const innerValue = entryFieldValue[contentfulData.defaultLocale];
-
-            switch (field.fieldType) {
-              case 'file':
-                fileFieldAttributes = uploadData(
-                  contentfulAssetsMap[innerValue.sys.id],
-                );
-                break;
-              case 'gallery':
-                fileFieldAttributes = innerValue
-                  .map(link => uploadData(contentfulAssetsMap[link.sys.id]))
-                  .filter(v => !!v);
-                break;
-              default:
-                break;
-            }
-
-            recordAttributes = Object.assign(recordAttributes, {
-              [camelize(apiKey)]: fileFieldAttributes,
-            });
-          }
-        }
+        uploadsMapping[asset.sys.id.toString()] = null;
       }
-
-      // if no file/gallery is found, no update needed.
-      if (Object.entries(recordAttributes).length > 0) {
-        await datoClient.items.update(datoItemId, recordAttributes);
-      }
-
-      spinner.text = progress.tick();
     }
 
     spinner.succeed();
+    return uploadsMapping;
   } catch (e) {
     spinner.fail();
     throw e;

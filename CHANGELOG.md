@@ -1,3 +1,7 @@
+## 3.4.5
+
+- Allow importing Rich Text from Contentful and transform it to DatoCMS Structured Text
+
 ## 3.2.0
 
 - Add support for aborting `createUploadPath`, `uploadFile` and `uploadImage` through `uploadPromise.cancel`
@@ -123,10 +127,10 @@ import { SiteClient } from 'datocms-client';
 const client = new SiteClient('YOUR-API-KEY');
 
 // `deserializeResponse` is true by default:
-const accessToken = client.accessTokens.create(
-  (name: 'New token'),
-  (role: '34'),
-);
+const accessToken = client.accessTokens.create({
+  name: 'New token',
+  role: '34',
+});
 
 // {
 //   id: "312",

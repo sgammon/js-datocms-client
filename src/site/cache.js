@@ -19,6 +19,9 @@ module.exports = {
     copyUsers: true,
     destroy: true,
   },
+  auditLogEvent: {
+    query: true,
+  },
   menuItems: {
     create: true,
     update: true,
@@ -38,8 +41,11 @@ module.exports = {
     create: true,
     update: true,
     all: true,
+    referencing: true,
+    related: true,
     find: true,
     destroy: true,
+    duplicate: true,
   },
   fieldsets: {
     create: true,
@@ -99,6 +105,7 @@ module.exports = {
     bulkPublish: true,
     bulkUnpublish: true,
     bulkDestroy: true,
+    bulkMoveToStage: true,
   },
   itemVersions: {
     restore: true,
@@ -120,6 +127,10 @@ module.exports = {
     create: true,
   },
   scheduledPublication: {
+    create: true,
+    destroy: true,
+  },
+  scheduledUnpublishing: {
     create: true,
     destroy: true,
   },
@@ -155,6 +166,7 @@ module.exports = {
     create: true,
     update: true,
     trigger: true,
+    reindex: true,
     destroy: true,
   },
   itemTypeFilters: {
@@ -217,5 +229,12 @@ module.exports = {
   site: {
     find: true,
     update: true,
+  },
+  workflows: {
+    create: true,
+    update: true,
+    all: true,
+    find: true,
+    destroy: true,
   },
 };
