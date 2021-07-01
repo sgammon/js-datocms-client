@@ -59,7 +59,9 @@ export default async ({
   }
 
   spinner.succeed(
-    `Found ${(entries || []).length} entries and ${(assets || []).length} assets in Contentful project`,
+    `Found ${(entries || []).length} entries and ${
+      (assets || []).length
+    } assets in Contentful project`,
   );
 
   return {
